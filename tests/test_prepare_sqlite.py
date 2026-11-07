@@ -15,7 +15,8 @@ from prepare_sources import PreparationError
 
 class SQLitePreparationTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="mscharged-sqlite-test-")
+        # A spaced path exercises SQLite's unescaped $(TOP) Make include.
+        self.temp = tempfile.TemporaryDirectory(prefix="mscharged sqlite test ")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.build = self.root / "build"

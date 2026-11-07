@@ -46,11 +46,19 @@ def generate(root, build, cc, make, tclsh, *, check=False, discard_generated=Fal
             raise PreparationError("SQLite generated inputs were edited; preserve them before using --discard-generated")
         if current and clean:
             return target
-        with tempfile.TemporaryDirectory(prefix=".sqlite-generate-", dir=parent) as temporary:
+        # SQLite's Makefile includes $(TOP)/main.mk without escaping TOP, so
+        # GNU make splits an otherwise valid source path that contains spaces.
+        # Generate through a short temporary source copy and copy the
+        # results back into the build tree below.
+        with tempfile.TemporaryDirectory(prefix="recharged-sqlite-") as temporary:
             work = Path(temporary)
+            source_alias = work / "source"
+            # Some Tcl generators canonicalize symlinks, which would expose
+            # the original spaced path again.
+            shutil.copytree(source, source_alias)
             log = build / "sqlite-generation.log"
-            command = [str(make), "-f", str(source / "Makefile.linux-generic"),
-                       f"TOP={source}", f"B.cc={cc}", f"B.tclsh={tclsh}",
+            command = [str(make), "-f", str(source_alias / "Makefile.linux-generic"),
+                       f"TOP={source_alias}", f"B.cc={cc}", f"B.tclsh={tclsh}",
                        f"TCLSH_CMD={tclsh}", "CFLAGS=", "sqlite3.c", "sqlite3.h"]
             environment = {k: v for k, v in os.environ.items()
                            if k not in ("MAKEFLAGS", "MFLAGS", "GNUMAKEFLAGS")}
